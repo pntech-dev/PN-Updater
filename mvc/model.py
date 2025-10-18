@@ -53,16 +53,30 @@ class Model(QObject):
             Notificator.show_notification(notify_type="error", notify_title="Ошибка", notify_text=notification_text)
             raise FileNotFoundError(f"Файл конфигурации не найден. Путь: {config_file_path}")
 
-        try:
-            with open(config_file_path, "r") as config_file: # Open the configuration file
-                config_data = yaml.safe_load(config_file) # We download the data from the configuration file
-        except Exception as e:
-            notification_text = f"Ошибка при чтении файла конфигурации.\nОшибка: {e}" # Notification text"
-            # We display a notification
+        config_data = self.__read_yaml_file(config_file_path)
+        if config_data is None:
+            notification_text = f"Не удалось прочитать файл конфигурации.\nПуть: {config_file_path}"
             Notificator.show_notification(notify_type="error", notify_title="Ошибка", notify_text=notification_text)
-            raise IOError(f"Ошибка при чтении файла конфигурации: {e}")
-        
+            raise IOError(f"Не удалось прочитать файл конфигурации: {config_file_path}")
         return config_data
+
+    def __read_yaml_file(self, file_path):
+        """Reads a YAML file with multiple encodings.
+
+        Args:
+            file_path (str): The path to the YAML file.
+
+        Returns:
+            dict: The loaded YAML data, or None if reading fails.
+        """
+        encodings = ['utf-8', 'cp1251', 'latin-1']
+        for encoding in encodings:
+            try:
+                with open(file_path, "r", encoding=encoding) as config_file:
+                    return yaml.safe_load(config_file)
+            except (UnicodeDecodeError, yaml.YAMLError):
+                continue
+        return None
         
     def __get_server_program_version(self):
         """Retrieves the program version from the server's configuration file.
@@ -81,15 +95,11 @@ class Model(QObject):
             Notificator.show_notification(notify_type="error", notify_title="Ошибка", notify_text=notification_text)
             raise ValueError(f"Файл конфигурации на сервере не найден.\nПуть: {server_config_file_path}")
         
-        try:
-            with open(server_config_file_path, "r") as server_config_file: # Open the config file
-                server_config_data = yaml.safe_load(server_config_file) # We download the data from the config file
-
-        except Exception as e:
-            notification_text = f"Ошибка при чтении файла конфигурации на сервере.\nОшибка: {e}"
-            # We display a notification
+        server_config_data = self.__read_yaml_file(server_config_file_path)
+        if server_config_data is None:
+            notification_text = f"Не удалось прочитать файл конфигурации на сервере.\nПуть: {server_config_file_path}"
             Notificator.show_notification(notify_type="error", notify_title="Ошибка", notify_text=notification_text)
-            raise ValueError(f"Ошибка при чтении файла конфигурации на сервере.\nОшибка: {e}")
+            raise ValueError(f"Не удалось прочитать файл конфигурации на сервере: {server_config_file_path}")
         
         return server_config_data.get("program_version_number") # Get the server program version
         
